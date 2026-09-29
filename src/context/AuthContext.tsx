@@ -1,14 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { UserProfile, Language } from '../types';
 import { StorageService } from '../services/storage';
+import { SupabaseService } from '../services/supabaseClient';
 
 interface AuthContextType {
   user: UserProfile | null;
   isAuthenticated: boolean;
   login: (email: string, password?: string) => boolean;
   loginAsDemoPersona: (personaKey: 'student' | 'farmer' | 'citizen') => void;
-  register: (userData: Omit<UserProfile, 'id' | 'createdAt'>) => boolean;
-  updateProfile: (updatedData: Partial<UserProfile>) => void;
+  register: (userData: Omit<UserProfile, 'id' | 'createdAt'>) => Promise<{ success: boolean; error?: string }>;
+  updateProfile: (updatedData: Partial<UserProfile>) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
 }
 
@@ -82,6 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     setUser(newUser);
     StorageService.setUser(newUser);
+    SupabaseService.syncProfile(newUser);
     return true;
   };
 
@@ -89,24 +91,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const persona = DEMO_PERSONAS[personaKey];
     setUser(persona);
     StorageService.setUser(persona);
+    SupabaseService.syncProfile(persona);
   };
 
-  const register = (userData: Omit<UserProfile, 'id' | 'createdAt'>) => {
+  const register = async (userData: Omit<UserProfile, 'id' | 'createdAt'>): Promise<{ success: boolean; error?: string }> => {
     const newUser: UserProfile = {
       ...userData,
       id: 'user-' + Date.now(),
       createdAt: new Date().toISOString().split('T')[0]
     };
+
+    // Insert directly into Supabase
+    const res = await SupabaseService.insertProfile(newUser);
+    if (!res.success) {
+      return { success: false, error: res.error || 'Failed to insert profile into Supabase.' };
+    }
+
     setUser(newUser);
     StorageService.setUser(newUser);
-    return true;
+    return { success: true };
   };
 
-  const updateProfile = (updatedData: Partial<UserProfile>) => {
-    if (!user) return;
-    const updated = { ...user, ...updatedData };
+  const updateProfile = async (updatedData: Partial<UserProfile>): Promise<{ success: boolean; error?: string }> => {
+    if (!user) return { success: false, error: 'No active profile found to update.' };
+    const updated: UserProfile = { ...user, ...updatedData };
+
+    const res = await SupabaseService.updateProfile(updated);
+    if (!res.success) {
+      return { success: false, error: res.error || 'Failed to update profile in Supabase.' };
+    }
+
     setUser(updated);
     StorageService.setUser(updated);
+    return { success: true };
   };
 
   const logout = () => {

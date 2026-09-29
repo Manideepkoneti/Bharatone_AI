@@ -14,7 +14,9 @@ import {
   CloudRain,
   Thermometer,
   Droplets,
-  Wind
+  Wind,
+  Video,
+  ExternalLink
 } from 'lucide-react';
 import { useNotification } from '../../context/NotificationContext';
 
@@ -32,6 +34,34 @@ export const AgricultureView: React.FC<AgricultureViewProps> = ({ selectedLang }
   const [uploadedImagePreview, setUploadedImagePreview] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<CropAnalysisResult | null>(SAMPLE_CROP_IMAGES[0].analysis);
+
+  const getYouTubeQuery = (topic?: string) => {
+    const isRice = cropType.toLowerCase().includes('paddy') || cropType.toLowerCase().includes('rice');
+    const isTomato = cropType.toLowerCase().includes('tomato');
+    
+    if (selectedLang === 'te') {
+      if (isRice) return 'వరి ఆకులు పసుపు రంగులో మారడం కారణాలు పరిష్కారం';
+      if (isTomato) return 'టమోటా ఆకులు పసుపు రంగు తెగులు నివారణ';
+      return `${cropType} ఆకులు పసుపు రంగు నివారణ వ్యవసాయం`;
+    }
+    
+    if (selectedLang === 'hi') {
+      if (isRice) return 'धान की पत्तियां पीली होने के कारण और समाधान';
+      if (isTomato) return 'टमाटर की पत्तियां पीली होने का उपचार और दवा';
+      return `${cropType} पत्तियां पीली होने का समाधान कृषि`;
+    }
+
+    // English
+    if (topic === 'organic') return `${cropType} yellow leaves organic home remedy treatment`;
+    if (topic === 'fertilizer') return `${cropType} nutrient deficiency NPK zinc fertilizer guide`;
+    if (topic === 'expert') return `${cropType} crop disease management krishi vigyan kendra`;
+    return `${cropType} yellow leaves nutrient deficiency treatment`;
+  };
+
+  const getYouTubeSearchUrl = (topic?: string) => {
+    const query = getYouTubeQuery(topic);
+    return `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -388,6 +418,84 @@ export const AgricultureView: React.FC<AgricultureViewProps> = ({ selectedLang }
                       {step}
                     </div>
                   ))}
+                </div>
+              </div>
+
+              {/* Watch & Learn: Problem-Related Educational Videos */}
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-red-950/30 via-slate-900 to-slate-900 border border-red-500/30 space-y-4 animate-fade-in shadow-xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-red-600 text-white flex items-center justify-center shadow-lg shadow-red-500/20 shrink-0">
+                      <Video className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-white flex items-center gap-1.5 font-heading">
+                        <span>🎥 Watch & Learn</span>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/30">
+                          Educational Videos
+                        </span>
+                      </h4>
+                      <p className="text-xs text-slate-400">
+                        Problem-related agricultural video resources & field treatment demos
+                      </p>
+                    </div>
+                  </div>
+
+                  <a
+                    href={getYouTubeSearchUrl()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/25 transition-all hover:scale-105 active:scale-95 group shrink-0"
+                  >
+                    <span>Watch on YouTube</span>
+                    <ExternalLink className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                  </a>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-900/80 border border-white/5 space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] text-slate-400">
+                    <span className="font-semibold text-slate-300">Targeted Educational Search Query:</span>
+                    <span className="font-mono text-red-400 font-bold uppercase">{selectedLang.toUpperCase()}</span>
+                  </div>
+                  <p className="text-xs font-semibold text-white bg-slate-950/80 p-2.5 rounded-lg border border-white/5 font-telugu">
+                    "{getYouTubeQuery()}"
+                  </p>
+                </div>
+
+                {/* Quick Topic Pill Links */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Explore Specific Video Topics:
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    <a
+                      href={getYouTubeSearchUrl('organic')}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-medium flex items-center gap-1.5 transition-all hover:scale-105"
+                    >
+                      <span>🌿 Organic Remedies</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                    <a
+                      href={getYouTubeSearchUrl('fertilizer')}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-300 text-xs font-medium flex items-center gap-1.5 transition-all hover:scale-105"
+                    >
+                      <span>🧪 Fertilizer & Spray Guides</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                    <a
+                      href={getYouTubeSearchUrl('expert')}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-medium flex items-center gap-1.5 transition-all hover:scale-105"
+                    >
+                      <span>🧑‍🌾 Krishi Vigyan Kendra Talks</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
                 </div>
               </div>
 

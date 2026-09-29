@@ -1,4 +1,5 @@
 import React from 'react';
+import { BharatOneLogo } from './BharatOneLogo';
 
 export const Footer: React.FC = () => {
   return (
@@ -7,7 +8,7 @@ export const Footer: React.FC = () => {
         {/* Brand & Slogan */}
         <div className="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
           <div className="flex items-center gap-2">
-            <span className="text-xl">🇮🇳</span>
+            <BharatOneLogo size="xs" />
             <span className="font-extrabold text-lg text-white font-heading tracking-tight">
               Bharat<span className="text-orange-500">One</span> <span className="text-sky-400">AI</span>
             </span>

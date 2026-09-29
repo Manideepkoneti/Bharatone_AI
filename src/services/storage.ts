@@ -10,6 +10,8 @@ export interface AppSettings {
   geminiApiKey: string;
   autoSpeak: boolean;
   soundEffects: boolean;
+  supabaseUrl?: string;
+  supabaseAnonKey?: string;
 }
 
 export interface AppStats {
@@ -192,25 +194,66 @@ export const StorageService = {
   // Settings
   getSettings(): AppSettings {
     const data = localStorage.getItem(SETTINGS_KEY);
+    let supabaseConfig = { url: '', anonKey: '' };
+    try {
+      const storedSup = localStorage.getItem('bharatone_supabase_config');
+      if (storedSup) {
+        supabaseConfig = JSON.parse(storedSup);
+      }
+    } catch {
+      // ignore
+    }
+
+    const defaultUrl = supabaseConfig.url || import.meta.env.VITE_SUPABASE_URL || 'https://htzyquzyglqzcuqjlakk.supabase.co';
+    const defaultKey = supabaseConfig.anonKey || import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_f1_vnsmsqB42Zib0wwzaLw_UjsGwUhr';
+
     if (!data) {
       const defaultSettings: AppSettings = {
         demoMode: true,
         geminiApiKey: '',
         autoSpeak: false,
-        soundEffects: true
+        soundEffects: true,
+        supabaseUrl: defaultUrl,
+        supabaseAnonKey: defaultKey
       };
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(defaultSettings));
       return defaultSettings;
     }
     try {
-      return JSON.parse(data);
+      const parsed = JSON.parse(data);
+      return {
+        demoMode: parsed.demoMode ?? true,
+        geminiApiKey: parsed.geminiApiKey || '',
+        autoSpeak: parsed.autoSpeak ?? false,
+        soundEffects: parsed.soundEffects ?? true,
+        supabaseUrl: parsed.supabaseUrl || defaultUrl,
+        supabaseAnonKey: parsed.supabaseAnonKey || defaultKey
+      };
     } catch {
-      return { demoMode: true, geminiApiKey: '', autoSpeak: false, soundEffects: true };
+      return { 
+        demoMode: true, 
+        geminiApiKey: '', 
+        autoSpeak: false, 
+        soundEffects: true,
+        supabaseUrl: defaultUrl,
+        supabaseAnonKey: defaultKey
+      };
     }
   },
 
   saveSettings(settings: AppSettings) {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    if (settings.supabaseUrl !== undefined || settings.supabaseAnonKey !== undefined) {
+      try {
+        const storedSup = localStorage.getItem('bharatone_supabase_config');
+        const curr = storedSup ? JSON.parse(storedSup) : {};
+        curr.url = settings.supabaseUrl !== undefined ? settings.supabaseUrl : (curr.url || '');
+        curr.anonKey = settings.supabaseAnonKey !== undefined ? settings.supabaseAnonKey : (curr.anonKey || '');
+        localStorage.setItem('bharatone_supabase_config', JSON.stringify(curr));
+      } catch {
+        // ignore
+      }
+    }
   },
 
   // Stats

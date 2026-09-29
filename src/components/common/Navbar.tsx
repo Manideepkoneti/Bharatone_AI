@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Language } from '../../types';
 import { Globe, Sparkles, User, Settings, Menu, X, ShieldCheck } from 'lucide-react';
 import { translations } from '../../data/translations';
+import { BharatOneLogo } from './BharatOneLogo';
 
 interface NavbarProps {
   currentTab: string;
@@ -42,11 +43,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           onClick={() => onNavigate(isAuthenticated ? 'dashboard' : 'landing')}
           className="flex items-center gap-3 cursor-pointer group"
         >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 via-sky-600 to-emerald-600 p-[1.5px] transition-transform duration-300 group-hover:scale-105 shadow-lg shadow-orange-500/10">
-            <div className="w-full h-full bg-[#0B0F19] rounded-[10px] flex items-center justify-center font-bold text-lg text-white">
-              🇮🇳
-            </div>
-          </div>
+          <BharatOneLogo size="md" className="group-hover:scale-105 transition-transform duration-300" />
           <div>
             <div className="flex items-center gap-2">
               <span className="font-extrabold text-xl tracking-tight text-white font-heading">

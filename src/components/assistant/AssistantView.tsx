@@ -4,8 +4,12 @@ import { useNotification } from '../../context/NotificationContext';
 import { Message, Conversation, Language } from '../../types';
 import { BharatOneAIEngine } from '../../services/aiEngine';
 import { StorageService } from '../../services/storage';
+import { SupabaseService } from '../../services/supabaseClient';
 import { StructuredResponse } from './StructuredResponse';
 import { AIOrb } from '../common/AIOrb';
+import { VoiceService } from '../../services/voiceService';
+import { VoiceControls } from './VoiceControls';
+import { VoiceSettingsModal } from './VoiceSettingsModal';
 import { HACKATHON_DEMO_SCENARIOS } from '../../data/scenarios';
 import { 
   Send, 
@@ -17,7 +21,9 @@ import {
   User as UserIcon, 
   Share2,
   Trash2,
-  Cpu
+  Cpu,
+  Volume2,
+  Settings2
 } from 'lucide-react';
 
 interface AssistantViewProps {
@@ -38,6 +44,8 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [isAiSpeaking, setIsAiSpeaking] = useState(false);
+  const [showVoiceSettings, setShowVoiceSettings] = useState(false);
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -67,9 +75,13 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
     }
   }, [initialQuery]);
 
-  const handleSend = async (queryText?: string) => {
+  const handleSend = async (queryText?: string, isFromVoice: boolean = false) => {
     const textToSend = queryText || input;
     if (!textToSend.trim()) return;
+
+    // If currently speaking, stop previous audio
+    VoiceService.stop();
+    setIsAiSpeaking(false);
 
     const userMessageId = 'user-' + Date.now();
     const userMsg: Message = {
@@ -120,6 +132,17 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
 
       setMessages((prev) => [...prev, assistantMsg]);
 
+      // Auto-play voice output if query was from voice input or auto-play is enabled
+      const voiceConfig = VoiceService.getSettings();
+      if (isFromVoice && voiceConfig.enabled && voiceConfig.autoPlayOnVoice) {
+        const textToSpeak = `${analysisResult.summary}. ${analysisResult.recommendedSteps?.[0] || ''}`;
+        VoiceService.speak(textToSpeak, analysisResult.languageCode, {
+          onStart: () => setIsAiSpeaking(true),
+          onEnd: () => setIsAiSpeaking(false),
+          onError: () => setIsAiSpeaking(false)
+        });
+      }
+
       // Save to Conversation History
       const conversation: Conversation = {
         id: 'conv-' + Date.now(),
@@ -131,6 +154,7 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
         summary: analysisResult.summary.slice(0, 100) + '...'
       };
       StorageService.saveConversation(conversation);
+      SupabaseService.saveConversation(conversation, user?.id);
 
       showToast('AI Analysis Complete', `Identified domain: ${analysisResult.domain.toUpperCase()}`, 'success');
     } catch {
@@ -170,7 +194,7 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
         const spoken = e.results[0][0].transcript;
         setInput(spoken);
         setIsListening(false);
-        handleSend(spoken);
+        handleSend(spoken, true);
       };
 
       recognition.onerror = () => {
@@ -189,6 +213,8 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
   };
 
   const handleClearChat = () => {
+    VoiceService.stop();
+    setIsAiSpeaking(false);
     setMessages([
       {
         id: 'welcome-reset',
@@ -211,13 +237,22 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
               One-Click Evaluation Scenarios
             </span>
           </div>
-          <button
-            onClick={handleClearChat}
-            className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-rose-400 transition-colors"
-          >
-            <RotateCcw className="w-3 h-3" />
-            <span>Reset Chat</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowVoiceSettings(true)}
+              className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-orange-400 transition-colors"
+            >
+              <Settings2 className="w-3 h-3 text-orange-400" />
+              <span>Voice Settings</span>
+            </button>
+            <button
+              onClick={handleClearChat}
+              className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-rose-400 transition-colors"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Reset Chat</span>
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -233,6 +268,34 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
           ))}
         </div>
       </div>
+
+      {/* Live AI Orb Speaking / Listening Indicator */}
+      {(isAiSpeaking || isListening) && (
+        <div className="glass-panel p-3.5 rounded-2xl border border-orange-500/30 bg-gradient-to-r from-orange-950/40 via-slate-900 to-sky-950/40 flex items-center justify-between gap-4 animate-fade-in shadow-xl">
+          <div className="flex items-center gap-3">
+            <AIOrb size="sm" isThinking={false} isSpeaking={isAiSpeaking} />
+            <div>
+              <p className="text-xs font-bold text-white flex items-center gap-2">
+                <span>{isAiSpeaking ? '🔊 BharatOne AI is Speaking...' : '🎤 Listening to your voice...'}</span>
+              </p>
+              <p className="text-[11px] text-slate-300">
+                {isAiSpeaking ? 'Audio playback in progress. You can pause, replay, or stop anytime.' : 'Speak naturally in Telugu, Hindi, or English.'}
+              </p>
+            </div>
+          </div>
+          {isAiSpeaking && (
+            <button
+              onClick={() => {
+                VoiceService.stop();
+                setIsAiSpeaking(false);
+              }}
+              className="px-3 py-1 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/40 text-xs font-semibold hover:bg-rose-500/30 transition-all shrink-0"
+            >
+              Stop Audio
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Messages Stream Container */}
       <div className="space-y-6 min-h-[450px]">
@@ -287,7 +350,18 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
                       onNavigateToModule={onNavigateToModule}
                     />
                   ) : (
-                    <div className="glass-panel p-4 rounded-2xl border border-white/10">
+                    <div className="glass-panel p-4 rounded-2xl border border-white/10 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-sky-400 font-mono">
+                          BharatOne AI
+                        </span>
+                        <VoiceControls
+                          textToSpeak={msg.content}
+                          languageCode={selectedLang}
+                          isSpeaking={isAiSpeaking}
+                          onStateChange={(speaking) => setIsAiSpeaking(speaking)}
+                        />
+                      </div>
                       <p className="text-sm text-slate-200 leading-relaxed font-telugu">
                         {msg.content}
                       </p>
@@ -373,6 +447,12 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
           </button>
         </form>
       </div>
+
+      {/* Voice Settings Modal */}
+      <VoiceSettingsModal
+        isOpen={showVoiceSettings}
+        onClose={() => setShowVoiceSettings(false)}
+      />
     </div>
   );
 };

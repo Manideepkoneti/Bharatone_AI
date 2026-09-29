@@ -13,6 +13,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { useNotification } from '../../context/NotificationContext';
+import { VoiceControls } from './VoiceControls';
 
 interface StructuredResponseProps {
   analysis: IntentAnalysis;
@@ -81,18 +82,12 @@ export const StructuredResponse: React.FC<StructuredResponseProps> = ({
           <span className="text-xs font-bold uppercase tracking-wider text-sky-400">
             1. Executive Guidance Summary
           </span>
-          <button
-            type="button"
-            onClick={handleReadAloud}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-              isPlayingAudio
-                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse'
-                : 'bg-slate-800 text-slate-300 hover:text-white border border-white/10'
-            }`}
-          >
-            {isPlayingAudio ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5 text-orange-400" />}
-            <span>{isPlayingAudio ? 'Stop Voice' : 'Read Aloud'}</span>
-          </button>
+          <VoiceControls
+            textToSpeak={`${analysis.summary}. Next steps: ${analysis.recommendedSteps.slice(0, 2).join('. ')}`}
+            languageCode={analysis.languageCode}
+            isSpeaking={isPlayingAudio}
+            onStateChange={(speaking) => setIsPlayingAudio(speaking)}
+          />
         </div>
         <p className="text-sm sm:text-base text-white leading-relaxed font-telugu">
           {analysis.summary}

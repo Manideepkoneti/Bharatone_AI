@@ -18,6 +18,7 @@ import {
   ShieldAlert
 } from 'lucide-react';
 import { translations } from '../../data/translations';
+import { BharatOneLogo } from './BharatOneLogo';
 
 interface SidebarProps {
   currentTab: string;
@@ -59,12 +60,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Core AI Assistant Highlight Card */}
         <div 
           onClick={() => onNavigate('assistant')}
-          className="p-3 rounded-xl bg-gradient-to-r from-sky-950/60 via-blue-900/40 to-slate-900 border border-sky-500/30 hover:border-sky-400/60 transition-all cursor-pointer shadow-lg shadow-sky-500/5 group"
+          className="p-3 rounded-2xl bg-gradient-to-r from-sky-950/60 via-blue-900/40 to-slate-900 border border-sky-500/30 hover:border-sky-400/60 transition-all cursor-pointer shadow-lg shadow-sky-500/5 group"
         >
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-sky-500/20 flex items-center justify-center text-sky-400 group-hover:scale-110 transition-transform">
-              <Sparkles className="w-4 h-4 animate-pulse" />
-            </div>
+            <BharatOneLogo size="sm" className="group-hover:scale-110 transition-transform" />
             <div>
               <p className="text-xs font-bold text-white tracking-wide">BharatOne Core</p>
               <p className="text-[11px] text-sky-300">Natural Multilingual AI</p>

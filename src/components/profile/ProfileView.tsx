@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
-import { User, Mail, Globe, MapPin, GraduationCap, Save, CheckCircle2 } from 'lucide-react';
+import { User, Mail, Globe, MapPin, GraduationCap, Save, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Language } from '../../types';
 
 export const ProfileView: React.FC = () => {
@@ -14,18 +14,47 @@ export const ProfileView: React.FC = () => {
   const [location, setLocation] = useState(user?.location || 'Andhra Pradesh');
   const [district, setDistrict] = useState(user?.district || 'Guntur');
   const [education, setEducation] = useState(user?.education || 'Undergraduate (B.Tech)');
+  const [saving, setSaving] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateProfile({
-      name,
-      email,
-      preferredLanguage,
-      location,
-      district,
-      education
-    });
-    showToast('Profile Updated', 'Your citizen preferences were saved successfully.', 'success');
+    setSaving(true);
+    setStatusMessage(null);
+    try {
+      const res = await updateProfile({
+        name: name.trim(),
+        email: email.trim(),
+        preferredLanguage,
+        location,
+        district: district.trim(),
+        education: education.trim()
+      });
+
+      if (res.success) {
+        setStatusMessage({
+          type: 'success',
+          message: 'Submitted successfully! Your profile preferences were saved to Supabase.'
+        });
+        showToast('Submitted successfully', 'Your citizen preferences were saved to Supabase.', 'success');
+      } else {
+        const errorText = res.error || 'Failed to update profile in Supabase.';
+        setStatusMessage({
+          type: 'error',
+          message: `Supabase Error: ${errorText}`
+        });
+        showToast('Submission Failed', errorText, 'error');
+      }
+    } catch (err: any) {
+      const errorText = err?.message || 'An unexpected error occurred during submission.';
+      setStatusMessage({
+        type: 'error',
+        message: `Supabase Error: ${errorText}`
+      });
+      showToast('Submission Failed', errorText, 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -62,6 +91,29 @@ export const ProfileView: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Live Feedback Banner */}
+        {statusMessage && (
+          <div
+            className={`p-4 rounded-2xl flex items-start gap-3 text-sm animate-fade-in ${
+              statusMessage.type === 'success'
+                ? 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-300'
+                : 'bg-rose-500/15 border border-rose-500/40 text-rose-300'
+            }`}
+          >
+            {statusMessage.type === 'success' ? (
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+            )}
+            <div className="space-y-0.5">
+              <p className="font-bold">
+                {statusMessage.type === 'success' ? 'Submitted successfully' : 'Submission Error'}
+              </p>
+              <p className="text-xs opacity-90 leading-relaxed">{statusMessage.message}</p>
+            </div>
+          </div>
+        )}
 
         {/* Profile Edit Form */}
         <form onSubmit={handleSave} className="space-y-5">
@@ -145,10 +197,11 @@ export const ProfileView: React.FC = () => {
           <div className="pt-4 flex justify-end">
             <button
               type="submit"
-              className="flex items-center gap-2 px-6 py-3 rounded-xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-lg shadow-orange-500/25 transition-all hover:scale-105 active:scale-95"
+              disabled={saving}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-lg shadow-orange-500/25 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
             >
               <Save className="w-4 h-4" />
-              <span>Save Profile Preferences</span>
+              <span>{saving ? 'Saving to Supabase...' : 'Save Profile Preferences'}</span>
             </button>
           </div>
         </form>

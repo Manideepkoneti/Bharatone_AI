@@ -1,21 +1,37 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
-import { Eye, EyeOff, Lock, Mail, ArrowRight, UserCheck } from 'lucide-react';
-import { AIOrb } from '../common/AIOrb';
+import { Eye, EyeOff, Lock, Mail, ArrowRight, UserCheck, Globe } from 'lucide-react';
+import { BharatOneLogo } from '../common/BharatOneLogo';
+import { Language } from '../../types';
 
 interface LoginViewProps {
   onNavigate: (tab: string) => void;
+  onLanguageChange?: (lang: Language) => void;
+  currentLang?: Language;
 }
 
-export const LoginView: React.FC<LoginViewProps> = ({ onNavigate }) => {
-  const { login, loginAsDemoPersona } = useAuth();
+export const LoginView: React.FC<LoginViewProps> = ({ onNavigate, onLanguageChange, currentLang = 'te' }) => {
+  const { login, loginAsDemoPersona, user, updateProfile } = useAuth();
   const { showToast } = useNotification();
   const [email, setEmail] = useState('ravi.kumar@bharatone.ai');
   const [password, setPassword] = useState('password123');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [selectedLang, setSelectedLang] = useState<Language>(user?.preferredLanguage || currentLang);
+
+  const handleLanguageSelect = (lang: Language) => {
+    setSelectedLang(lang);
+    if (onLanguageChange) {
+      onLanguageChange(lang);
+    }
+    if (user) {
+      updateProfile({ preferredLanguage: lang });
+    }
+    const names = { en: 'English', te: 'తెలుగు (Telugu)', hi: 'हिन्दी (Hindi)' };
+    showToast('Language Selected', `Preferred language set to ${names[lang]}.`, 'info');
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,6 +42,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onNavigate }) => {
     setLoading(true);
     setTimeout(() => {
       login(email, password);
+      if (user) {
+        updateProfile({ preferredLanguage: selectedLang });
+      }
       setLoading(false);
       showToast('Welcome to BharatOne', `Logged in successfully as ${email}`, 'success');
       onNavigate('dashboard');
@@ -34,6 +53,13 @@ export const LoginView: React.FC<LoginViewProps> = ({ onNavigate }) => {
 
   const handleDemoSelect = (persona: 'student' | 'farmer' | 'citizen') => {
     loginAsDemoPersona(persona);
+    if (persona === 'citizen') {
+      setSelectedLang('hi');
+      onLanguageChange?.('hi');
+    } else {
+      setSelectedLang('te');
+      onLanguageChange?.('te');
+    }
     showToast('Demo Account Activated', `Loaded demo profile for immediate hackathon testing.`, 'success');
     onNavigate('dashboard');
   };
@@ -79,9 +105,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onNavigate }) => {
             </div>
           </div>
 
-          {/* Center Orb Visual */}
+          {/* Center Custom Logo Visual with subtle float/glow */}
           <div className="relative z-10 py-6 flex justify-center">
-            <AIOrb size="md" />
+            <BharatOneLogo size="xl" animateGlow={true} className="animate-float" />
           </div>
 
           {/* 1-Click Demo Profiles for Hackathon Judges */}
@@ -127,6 +153,44 @@ export const LoginView: React.FC<LoginViewProps> = ({ onNavigate }) => {
             <p className="text-xs text-slate-400 mt-1">
               Sign in to access your citizen dashboard and AI guidance history.
             </p>
+          </div>
+
+          {/* Preferred Language Selector (Requirement 2) */}
+          <div className="space-y-2 p-3.5 rounded-2xl bg-slate-900/90 border border-white/10">
+            <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Globe className="w-3.5 h-3.5 text-orange-400" />
+                Select Preferred Language
+              </span>
+              <span className="text-[10px] text-slate-400">Stored in profile</span>
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { code: 'en', label: 'English', native: 'English' },
+                { code: 'te', label: 'తెలుగు', native: 'Telugu' },
+                { code: 'hi', label: 'हिन्दी', native: 'Hindi' },
+              ].map((lang) => {
+                const isSelected = selectedLang === lang.code;
+                return (
+                  <button
+                    key={lang.code}
+                    type="button"
+                    onClick={() => handleLanguageSelect(lang.code as Language)}
+                    className={`py-2 px-2.5 rounded-xl border flex flex-col items-center justify-center transition-all duration-300 ${
+                      isSelected
+                        ? 'bg-gradient-to-br from-orange-500/20 via-sky-500/10 to-emerald-500/20 border-orange-500 shadow-md shadow-orange-500/20 scale-[1.03] ring-1 ring-orange-500/40 text-white font-bold'
+                        : 'bg-slate-800/80 border-white/5 text-slate-400 hover:text-slate-200 hover:border-white/20'
+                    }`}
+                  >
+                    <span className="text-xs flex items-center gap-1">
+                      <span>🇮🇳</span>
+                      <span>{lang.label}</span>
+                    </span>
+                    <span className="text-[10px] font-normal text-slate-400 mt-0.5">{lang.native}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
